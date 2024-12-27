@@ -39,7 +39,9 @@ void Robot::control() {
         PRECISION_DATA_TYPE mult = 1;
         if((angle < -90 || angle > 90) && !done_distance)
             mult = -1;
+        Serial.println(mult);
         PRECISION_DATA_TYPE distance_term = mult*((done_distance && abs(target_distance - total_distance) < 5) ? 0 : pid_distance->evaluate(target_distance - total_distance));
+        Serial.println(distance_term);
         PRECISION_DATA_TYPE angle_term = done_angle ? 0 : mult!=1 ?pid_angle->evaluate(correctAngle(target_angle - total_angle-180)) :pid_angle->evaluate(correctAngle(target_angle - total_angle));
         int16_t left_wheel = constrain(constrain(distance_term, -200, 200) - constrain(angle_term, -200, 200), -255, 255);
         int16_t right_wheel = constrain(constrain(distance_term, -200, 200) + constrain(angle_term, -200, 200), -255, 255);
@@ -157,8 +159,8 @@ void Robot::setRampSpeed(PRECISION_DATA_TYPE rampSpeed) {
     PRECISION_DATA_TYPE mult = 1;
     if((angle < -90 || angle > 90) && !done_distance)
         mult = -1;
-    Serial.println(rampSpeed);
     ramp_speed = mult*rampSpeed;
+    Serial.println(ramp_speed);
 }
 
 PRECISION_DATA_TYPE Robot::getTotalDistance() const {

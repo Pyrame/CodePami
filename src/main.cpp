@@ -41,7 +41,7 @@ void setup() {
     robot->setPidAngle(new PID(2, 0.02, 0.01));
     //robot->addTarget(new AngleTarget(robot, 360*40, 90,90,360,false));
 
-    robot->addTarget(new PositionTarget(robot, init_pos, 300,400,300));
+    robot->addTarget(new PositionTarget(robot, init_pos, 300,300,400,300));
     robot->addTarget(new BezierTarget(robot, 300, 400, 300, pos, 3000));
     robot->addTarget(new BezierTarget(robot, 300,400,300,{2000, 1000, -80}, 1000));
     robot->addTarget(new BezierTarget(robot, 300,400,300,{3000, 1000, 80}, 1000));

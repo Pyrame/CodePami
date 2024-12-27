@@ -21,7 +21,6 @@ void CurveTarget::process(){
         this->t = this->curve->getTForLength(this->t, 40.0f);
         target_pos = this->curve->getPosition(this->t);
     }
-    robot->setRampSpeed(data.speed);
     robot->setTargetAngle(robot->getAbsoluteAngle((target_pos-robot->getPosition()).getVectorAngle()));
     if(t>=1.0f && distance < 10){
         if(end_speed == 0)
