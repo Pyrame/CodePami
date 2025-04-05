@@ -101,6 +101,6 @@ class Robot : public Printable{
 
     void setTotalAngle(PRECISION_DATA_TYPE totalAngle);
 
-
+    void stop();
 };
 #endif
