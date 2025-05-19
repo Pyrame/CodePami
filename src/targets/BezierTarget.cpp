@@ -27,4 +27,11 @@ void BezierTarget::on_done() {
 
 }
 
+void BezierTarget::reinitRamp(){
+    delete distanceRamp;
+    PRECISION_DATA_TYPE t = this->curve->findNearest(robot->getPosition());
+    this->distanceRamp = new Ramp(acc, max_speed, dec, this->curve->getLength(t), this->robot->getRampSpeed(), end_speed);
+    this->distanceRamp->start(robot->getTotalDistance());
+}
+
 

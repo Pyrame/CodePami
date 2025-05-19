@@ -44,3 +44,9 @@ void PositionTarget::on_done() {
         robot->setTargetDistance(robot->getTotalDistance());
     robot->setTargetAngle(robot->getTotalAngle());
 }
+
+void PositionTarget::reinitRamp(){
+    delete ramp;
+    ramp = new Ramp(acc, max_speed, dec, (pos-robot->getPosition()).getDistance(), robot->getRampSpeed(), end_speed);
+    ramp->start(robot->getTotalDistance());
+}

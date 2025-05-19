@@ -25,6 +25,8 @@ public:
 
     void on_done() override;
 
+    void reinitRamp() override;
+
     ~RotateTowardPositionTarget() override;
 };
 

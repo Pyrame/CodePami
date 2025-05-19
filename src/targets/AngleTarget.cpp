@@ -42,3 +42,13 @@ AngleTarget::AngleTarget(Robot *robot, PRECISION_DATA_TYPE target, PRECISION_DAT
 void AngleTarget::on_done() {
     robot->setTargetDistance(robot->getTotalDistance());
 }
+
+void AngleTarget::reinitRamp(){
+    delete ramp;
+    if(!optimized){
+        ramp = new Ramp(acc, max_speed, dec, target-robot->getPosition().getAngle());
+    }else{
+        ramp = new Ramp(acc, max_speed, dec, correctAngle(target-robot->getPosition().getAngle()));
+    }
+    ramp->start(robot->getTotalAngle());
+}

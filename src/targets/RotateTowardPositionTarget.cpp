@@ -43,3 +43,11 @@ void RotateTowardPositionTarget::on_done() {
     Serial.println("Called rotate toward");
 #endif
 }
+
+void RotateTowardPositionTarget::reinitRamp() {
+    delete ramp;
+    target = (pos-robot->getPosition()).getVectorAngle();
+    ramp = new Ramp(acc, max_speed, dec, correctAngle(target- robot->getTargetAngle()));
+    ramp->start(robot->getTotalAngle());
+
+}

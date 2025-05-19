@@ -18,6 +18,11 @@ public:
             is_init = true;
         }
     }
+    
+    virtual void reinitRamp(){
+        
+    }
+
     virtual bool is_done() = 0;
     virtual void process() = 0;
 

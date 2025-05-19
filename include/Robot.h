@@ -63,6 +63,8 @@ class Robot : public Printable{
 
     bool addTarget(Target* target);
 
+    void resetTarget();
+
     size_t printTo(Print &p) const override;
 
     PRECISION_DATA_TYPE getTargetDistance() const;

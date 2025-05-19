@@ -26,6 +26,8 @@ public:
 
     void on_done() override;
 
+    void reinitRamp() override;
+
     bool optimized;
 };
 #endif //CODEPAMI_ANGLETARGET_H

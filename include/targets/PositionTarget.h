@@ -24,6 +24,8 @@ public:
 
     void process() override;
 
+    void reinitRamp() override;
+
     ~PositionTarget() override;
 
     void on_done() override;
