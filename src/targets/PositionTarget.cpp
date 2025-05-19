@@ -1,6 +1,3 @@
-//
-// Created by fogoz on 07/12/2024.
-//
 #include "./targets/PositionTarget.h"
 #include "Robot.h"
 
@@ -50,3 +47,4 @@ void PositionTarget::reinitRamp(){
     ramp = new Ramp(acc, max_speed, dec, (pos-robot->getPosition()).getDistance(), robot->getRampSpeed(), end_speed);
     ramp->start(robot->getTotalDistance());
 }
+

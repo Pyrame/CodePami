@@ -1,7 +1,3 @@
-//
-// Created by fogoz on 13/12/2024.
-//
-
 #ifndef CODEPAMI_BEZIERTARGET_H
 #define CODEPAMI_BEZIERTARGET_H
 #include "CurveTarget.h"

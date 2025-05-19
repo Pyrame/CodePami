@@ -1,6 +1,3 @@
-//
-// Created by fogoz on 07/12/2024.
-//
 #include "./targets/AngleTarget.h"
 #include "Robot.h"
 

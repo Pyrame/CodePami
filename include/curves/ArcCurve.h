@@ -1,7 +1,3 @@
-//
-// Created by fogoz on 13/12/2024.
-//
-
 #ifndef CODEPAMI_ARCCURVE_H
 #define CODEPAMI_ARCCURVE_H
 #include "curves/Curve.h"

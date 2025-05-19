@@ -1,7 +1,3 @@
-//
-// Created by fogoz on 11/12/2024.
-//
-
 #ifndef COURBEBEZIER_H
 #define COURBEBEZIER_H
 

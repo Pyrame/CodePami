@@ -42,7 +42,8 @@ void Robot::control() {
         //Serial.println(mult);
         PRECISION_DATA_TYPE distance_term = mult*((done_distance && abs(target_distance - total_distance) < 5) ? 0 : pid_distance->evaluate(target_distance - total_distance));
         //Serial.println(distance_term);
-        PRECISION_DATA_TYPE angle_term = done_angle ? 0 : mult!=1 ?pid_angle->evaluate(correctAngle(target_angle - total_angle-180)) :pid_angle->evaluate(correctAngle(target_angle - total_angle));
+        PRECISION_DATA_TYPE angle_term = done_angle ? 0 : (mult!=1 ?pid_angle->evaluate(correctAngle(target_angle - total_angle-180)) :pid_angle->evaluate(correctAngle(target_angle - total_angle)));
+        Serial.println(correctAngle(target_angle - total_angle));
         int16_t left_wheel = constrain(constrain(distance_term, -200, 200) - constrain(angle_term, -200, 200), -255, 255);
         int16_t right_wheel = constrain(constrain(distance_term, -200, 200) + constrain(angle_term, -200, 200), -255, 255);
         this->right_motor->setPWM(right_wheel);
@@ -158,8 +159,11 @@ void Robot::resetTarget(){
     if(this->target_count <= this->target_index)
         return;
     Target* target = this->targets[this->target_index];
+    setTargetDistance(getTotalDistance());
+    setTargetAngle(getTotalAngle());
     target->reinitRamp();
-
+    pid_angle->resetTerms();
+    pid_distance->resetTerms();
 }
 
 void Robot::setRampSpeed(PRECISION_DATA_TYPE rampSpeed) {
@@ -216,7 +220,7 @@ void Motor::setPWM(int16_t pwm) {
     pwm *= inverse ? -1 : 1;
     digitalWrite(dir_pin, pwm < 0 ? HIGH : LOW);
     analogWrite(pwm_pin, abs(pwm));
-    Serial.println(pwm);
+    //Serial.println(pwm);
 }
 
 PRECISION_DATA_TYPE correctAngle(PRECISION_DATA_TYPE angle) {
@@ -226,4 +230,33 @@ PRECISION_DATA_TYPE correctAngle(PRECISION_DATA_TYPE angle) {
         angle += 360;
     return angle;
     //return fmod(fmod(angle + 180, 360) - 360, 360) + 180;
+}
+
+void Robot::resetcontrol(){
+    if(pid_distance != nullptr && pid_angle != nullptr){
+        PRECISION_DATA_TYPE angle = correctAngle(target_angle - total_angle);
+        PRECISION_DATA_TYPE mult = 1;
+        if((angle < -90 || angle > 90) && !done_distance)
+            mult = -1;
+        //Serial.println(mult);
+        PRECISION_DATA_TYPE distance_term = mult*((done_distance && abs(target_distance - total_distance) < 5) ? 0 : pid_distance->evaluate(0));
+        //Serial.println(distance_term);
+        PRECISION_DATA_TYPE angle_term = done_angle ? 0 : mult!=1 ?pid_angle->evaluate(0) :pid_angle->evaluate(0);
+        int16_t left_wheel = constrain(constrain(distance_term, -200, 200) - constrain(angle_term, -200, 200), -255, 255);
+        int16_t right_wheel = constrain(constrain(distance_term, -200, 200) + constrain(angle_term, -200, 200), -255, 255);
+        this->right_motor->setPWM(right_wheel);
+        this->left_motor->setPWM(left_wheel);
+    }
+}
+
+
+void Robot::clearTargets() {
+    for(uint16_t i = 0; i < target_count; i++)
+        delete targets[i];
+    free(targets);
+
+    target_count = 0;
+    target_index = 0;
+    max_targets = 10;
+    targets = static_cast<Target **>(malloc(sizeof(Target *) * max_targets));
 }

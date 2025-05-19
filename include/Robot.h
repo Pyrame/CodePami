@@ -48,6 +48,8 @@ class Robot : public Printable{
     Robot(Motor* left_motor, Motor* right_motor, PRECISION_DATA_TYPE pulse_per_mm, PRECISION_DATA_TYPE track_mm, PRECISION_DATA_TYPE corr_right_wheel, PRECISION_DATA_TYPE x=0.0f, PRECISION_DATA_TYPE y=0.0f, PRECISION_DATA_TYPE a=0.0f);
 
     ~Robot();
+    
+    void clearTargets();
 
     void computePosition(int16_t delta_left_tick, int16_t delta_right_tick);
 
@@ -104,5 +106,7 @@ class Robot : public Printable{
     void setTotalAngle(PRECISION_DATA_TYPE totalAngle);
 
     void stop();
+
+    void resetcontrol();
 };
 #endif

@@ -1,6 +1,3 @@
-//
-// Created by fogoz on 07/12/2024.
-//
 #include "Arduino.h"
 
 #ifndef CODEPAMI_RAMP_H

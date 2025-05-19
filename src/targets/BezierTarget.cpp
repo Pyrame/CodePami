@@ -1,6 +1,3 @@
-//
-// Created by fogoz on 11/12/2024.
-//
 #include "./targets/BezierTarget.h"
 #include "Robot.h"
 #include "curves/BezierCurve.h"
@@ -30,7 +27,13 @@ void BezierTarget::on_done() {
 void BezierTarget::reinitRamp(){
     delete distanceRamp;
     PRECISION_DATA_TYPE t = this->curve->findNearest(robot->getPosition());
-    this->distanceRamp = new Ramp(acc, max_speed, dec, this->curve->getLength(t), this->robot->getRampSpeed(), end_speed);
+    PRECISION_DATA_TYPE length = this->curve->getLength(t);
+    Serial.print("T : ");
+    Serial.println(t);
+    Serial.print("Length : ");
+    Serial.println(length);
+
+    this->distanceRamp = new Ramp(acc, max_speed, dec, length, this->robot->getRampSpeed(), end_speed);
     this->distanceRamp->start(robot->getTotalDistance());
 }
 

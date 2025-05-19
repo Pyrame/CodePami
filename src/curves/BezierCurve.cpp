@@ -1,7 +1,3 @@
-//
-// Created by fogoz on 11/12/2024.
-//
-
 #include "curves/BezierCurve.h"
 #include "Position.h"
 #include "Integrator.h"

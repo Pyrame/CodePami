@@ -6,8 +6,13 @@
 //-D DEBUG_TXT
 #include <Wire.h> // Pour Capteur ultrason
 
+
 //#define TRACK_MM 142.0f *3645/3600
-#define TRACK_MM 52.3f//140.2469135802469f // Entraxe // Attention a bien modifier le PID selon
+#define PAMI 2 // Pami numéro: 1,2,3,4
+#define Capteur 1 // 20, 0, 15 cm
+#define SUPERSTARALT 1 // 1: Normal // 2: Escalier
+
+#define TRACK_MM 47.1f// (OG) //52.3f (V1) // Proto 1//140.2469135802469f // Entraxe // Attention a bien modifier le PID selon
 #define TICK_PER_MM 6.58f
 #define Pin_PWM_Left 10 //PWM
 #define Pin_Dir_Left 16
@@ -39,18 +44,23 @@ Robot* robot;
 Motor* left_motor = new Motor(Pin_Dir_Left, Pin_PWM_Left);
 Motor* right_motor = new Motor(Pin_Dir_Right, Pin_PWM_Right);
 
+
+
 //Servo
 unsigned long previousMicros = 0;  // Stocke le dernier temps où l'impulsion a commencé
-uint8_t pulseWidth = 1500;  // Largeur d'impulsion en microsecondes (90° par défaut)
+uint16_t pulseWidth = 1500;  // Largeur d'impulsion en microsecondes (90° par défaut)
 
 // Pins boutons
 const int boutonA = 14; //IO_0
 const int boutonB = 30; //IO_1
 const int boutonC = 17; //IO_2
 
-uint8_t pos = 0;
+// uint8_t pos = 0;
 
 bool Obstacle = false;
+bool Vu = true;
+
+// bool poscal = false;
 
 //uint64_t last_time;
 
@@ -64,11 +74,20 @@ int freeMemory() {
 // Timing
 uint64_t previous_micros;
 unsigned long StartingTime;  
-const unsigned long LimitTime = 15 * 1000;  // Fin de match: 100 seconds
+const unsigned long LimitTime = 100000;  // Fin de match: 100 seconds
+// const unsigned long Calibration = 1 * 1000; // Temps de calibration sur la scène
 
 // Capteur Ultrason
-uint8_t distlim1 = 15; // cm
-uint8_t distlim2 = 5;
+
+#if Capteur == 1 // Classique
+    uint8_t distlim1 = 20; // cm // 15 // 20
+#endif
+#if Capteur == 2 // Superstar
+    uint8_t distlim1 = 0;
+#endif
+#if Capteur == 3 // Trop loin
+    uint8_t distlim1 = 15;
+#endif
 
 void startMeasurement() {
     Wire.beginTransmission(SRF08_ADDRESS);
@@ -104,6 +123,7 @@ uint8_t previousStateC = 0;
 
 void setup() {
     Serial.begin(9600);
+    Romi32U4Motors::allowTurbo(true);
 
     delay(1000);
     Serial.println("Welcome to the little PAMI! My little Pamy!");
@@ -111,18 +131,18 @@ void setup() {
 
     //myServo.attach(SERVO_PIN); // Connect the signal wire to pin 5 (or another PWM pin): Faire la fete // A modifier le PIN
 
-    //pinMode(SWITCH_PIN, INPUT_PULLUP); // Active la résistance de pull-up interne du micro Superstar 
+
+
+
+    // Position init_pos(-1000,0,0); // Position initiale 
+    // Position pos(1000,1000,80); 
+    
+    robot = new Robot(left_motor,right_motor, TICK_PER_MM, TRACK_MM, 1.002f); // Tick // 1.005f (OG)
+    robot->setPidDistance(new PID(6, 7, 0.2)); // V2 : 3 0.1 0.02// PID settings // ROMI: 3, 0.1, 0.02 // A regler en fonction du PAMI
+    robot->setPidAngle(new PID(6, 7, 0.2)); // V2: 7 0.02 0.027// ROMI: 2, 0.02, 0.01
 
     // left_motor->setPWM(1000); // Pour tester les moteurs
     // right_motor->setPWM(1000);
-
-
-    Position init_pos(-1000,0,0); // Position initiale 
-    Position pos(1000,1000,80); 
-    
-    robot = new Robot(left_motor,right_motor, TICK_PER_MM, TRACK_MM, 1.0f); // Tick
-    robot->setPidDistance(new PID(3, 0.1, 0.02)); // PID settings // ROMI: 3, 0.1, 0.02 // A regler en fonction du PAMI
-    robot->setPidAngle(new PID(4, 0.02, 0.01)); // ROMI: 2, 0.02, 0.01
     
     //robot->addTarget(new AngleTarget(robot, 360*40, 90,90,360,false));
 
@@ -180,57 +200,363 @@ void setup() {
     #endif
         // Serial.println("Bouton A pressé: Strat Bleue engagée");
         // Bleu = -1;
-        Serial.println("Bouton A pressé");
-        delay(4000); // 4 secondes - Simule l'attente apres demarrage de match (normalement 85 sec)
-        robot->addTarget(new BezierTarget(robot, 300, 400, 300,{1000, -300, -45},100)); // Strat Loin Jaune
-        robot->addTarget(new BezierTarget(robot, 300, 400, 300, {1900, -250, 45},1000));
+        //Serial.println("Strat 0 (Rien de pressé)");
+        delay(4000); // Simule l'attente apres demarrage de match (normalement 85 sec)
+
+
+        // robot->addTarget(new PositionTarget(robot, {2000,0}, 300,400,300)); // Test PID
+
+        // //Superstar Jaune OG
+        // robot->addTarget(new PositionTarget(robot, {560,0}, 100,300,400));
+        // robot->addTarget(new PositionTarget(robot, {1200,0}, 100,300,400)); 
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1220,-315})); // Pour s'assurer qu'il fasse le tour dans le bon sens
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1200,-315}));
+        // robot->addTarget(new PositionTarget(robot, {1200,-315}, 300,300,400));
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1800,-315}));
+
+        // // Strat Loin Jaune OG
+        #if PAMI == 1
+            robot->addTarget(new BezierTarget(robot, 200, 400, 200,{1000, -400, -55},1000)); 
+            robot->addTarget(new BezierTarget(robot, 200, 400, 300, {1900, -200, 35},1000));
+        #endif
+        // // Strat Milieu Jaune OG
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1500,-500}));
+        // robot->addTarget(new PositionTarget(robot, {1500,-500}, 300,300,400));
+
+        // // Strat Proche Jaune OG
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1000,-400}));
+        // robot->addTarget(new PositionTarget(robot, {1000,-400}, 300,300,400));
+
+        ////////////////////////////
+
+        // //Superstar Jaune 2
+        // robot->addTarget(new PositionTarget(robot, {560,0}, 100,300,400));
+        // robot->addTarget(new PositionTarget(robot, {1200,0}, 100,300,400)); 
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1220,-315})); // Pour s'assurer qu'il fasse le tour dans le bon sens
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1200,-315}));
+        // robot->addTarget(new PositionTarget(robot, {1200,-315}, 300,300,400));
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1800,-315}));
+
+        // // Strat Loin Jaune 2
+        // robot->addTarget(new BezierTarget(robot, 200, 400, 200,{1000, -400, -55},1000)); 
+        // robot->addTarget(new BezierTarget(robot, 200, 400, 300, {1900, -200, 35},600));
+
+        // Strat Milieu Jaune 2
+        #if PAMI == 2
+            delay(2000);
+            robot->addTarget(new RotateTowardPositionTarget(robot, {1500,-400}));
+            robot->addTarget(new PositionTarget(robot, {1500,-400}, 300,300,400));
+        #endif
+        // // Strat Proche Jaune 2
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1000,-400}));
+        // robot->addTarget(new PositionTarget(robot, {1000,-400}, 300,300,400));
+
+        ////////////////////////////
+
+        // //Superstar Jaune 4
+        #if PAMI == 4
+            #if SUPERSTARALT == 1
+            robot->addTarget(new PositionTarget(robot, {540,0}, 100,300,400)); //
+
+            robot->addTarget(new PositionTarget(robot, {1200,0}, 100,300,400)); // Commence Strat a Lolo
+            robot->addTarget(new RotateTowardPositionTarget(robot, {1220,-285})); // Pour s'assurer qu'il fasse le tour dans le bon sens
+            robot->addTarget(new RotateTowardPositionTarget(robot, {1200,-285}));
+            robot->addTarget(new PositionTarget(robot, {1200,-285}, 300,300,400));
+            robot->addTarget(new RotateTowardPositionTarget(robot, {1800,-285}));
+            # endif
+            #if SUPERSTARALT == 2
+            // robot->addTarget(new PositionTarget(robot, {500,0}, 100,300,400)); //
+            robot->addTarget(new PositionTarget(robot, {1200,0}, 300,300,400)); // Commence Strat a Lolo
+            robot->addTarget(new RotateTowardPositionTarget(robot, {1220,-285})); // Pour s'assurer qu'il fasse le tour dans le bon sens
+            robot->addTarget(new RotateTowardPositionTarget(robot, {1200,-285}));
+            robot->addTarget(new PositionTarget(robot, {1200,-285}, 300,300,400));
+            robot->addTarget(new RotateTowardPositionTarget(robot, {1800,-285}));
+            # endif
+        #endif
+        // // Strat Loin Jaune 4
+        // robot->addTarget(new BezierTarget(robot, 200, 400, 200,{1000, -400, -45},700)); 
+        // robot->addTarget(new BezierTarget(robot, 200, 400, 300, {1900, -100, 55},1200));
+
+        // // Strat Milieu Jaune 4
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1500,-500}));
+        // robot->addTarget(new PositionTarget(robot, {1500,-500}, 300,300,400));
+
+        // // Strat Proche Jaune 4
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1000,-400}));
+        // robot->addTarget(new PositionTarget(robot, {1000,-400}, 300,300,400));
+
+        ////////////////////////////
+
+        // //Superstar Jaune 3
+        // robot->addTarget(new PositionTarget(robot, {560,0}, 100,300,400));
+        // robot->addTarget(new PositionTarget(robot, {1200,0}, 100,300,400)); 
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1220,-315})); // Pour s'assurer qu'il fasse le tour dans le bon sens
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1200,-315}));
+        // robot->addTarget(new PositionTarget(robot, {1200,-315}, 300,300,400));
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1800,-315}));
+
+        // // Strat Loin Jaune 3
+        // robot->addTarget(new BezierTarget(robot, 200, 400, 200,{1000, -400, -55},1000)); 
+        // robot->addTarget(new BezierTarget(robot, 200, 400, 300, {1900, -200, 35},600));
+
+        // // Strat Milieu Jaune 3
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1500,-500}));
+        // robot->addTarget(new PositionTarget(robot, {1500,-500}, 300,300,400));
+
+        // // Strat Proche Jaune 3
+        #if PAMI == 3
+            delay(4000);
+            robot->addTarget(new RotateTowardPositionTarget(robot, {1000,-400}));
+            robot->addTarget(new PositionTarget(robot, {1000,-400}, 300,300,400));
+        #endif
+        /////////////////////////////
+
+        // //Superstar Jaune Urgence
+        // robot->addTarget(new PositionTarget(robot, {560,0}, 100,300,400));
+        // robot->addTarget(new PositionTarget(robot, {1200,0}, 100,300,400)); 
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1220,-315})); // Pour s'assurer qu'il fasse le tour dans le bon sens
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1200,-315}));
+        // robot->addTarget(new PositionTarget(robot, {1200,-315}, 300,300,400));
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1800,-315}));
+
+        // // Strat Loin Jaune Urgence
+        // robot->addTarget(new BezierTarget(robot, 200, 400, 200,{1000, -400, -55},1000)); 
+        // robot->addTarget(new BezierTarget(robot, 200, 400, 300, {1900, -200, 35},1000));
+
+        // // Strat Milieu Jaune Urgence
+        // delay(2000);
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1500,-400}));
+        // robot->addTarget(new PositionTarget(robot, {1500,-400}, 300,300,400));
+
+        // // Strat Proche Jaune Urgence
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1000,-400}));
+        // robot->addTarget(new PositionTarget(robot, {1000,-400}, 300,300,400));
+
+        ///////////////////////////// TEST ROMEO /////////////////////////
+        // // Strat Loin Bleue OG
+        // robot->addTarget(new BezierTarget(robot, 300, 400, 300,{1000, 400, 45},1000)); 
+        // robot->addTarget(new BezierTarget(robot, 300, 400, 300, {2000, 100, -55},1000));
+
+        // // Strat Milieu Bleue 2
+        // delay(2000);
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1500,500}));
+        // robot->addTarget(new PositionTarget(robot, {1500,500}, 300,300,400));
+
+        // // Strat Proche Bleue 3
+        // delay(4000);
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1000,400}));
+        // robot->addTarget(new PositionTarget(robot, {1000,400}, 300,300,400));
+
+        // //Superstar Bleue 4
+        // robot->addTarget(new PositionTarget(robot, {560,0}, 100,300,400));
+        // robot->addTarget(new PositionTarget(robot, {1200,0}, 100,300,400)); 
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1220,315})); // Pour s'assurer qu'il fasse le tour dans le bon sens
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1200,315}));
+        // robot->addTarget(new PositionTarget(robot, {1200,315}, 300,300,400));
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1800,315}));
+
+                ///////////////////////////// TEST ALTERNATIF ///////////////////////// Moins bien
+        // // Strat Milieu Bleue 2
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1500,300}));
+        // robot->addTarget(new PositionTarget(robot, {1500,300}, 300,300,400));
+
+        // // Strat Proche Bleue 3
+        // delay(2000);
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1000,300}));
+        // robot->addTarget(new PositionTarget(robot, {1000,300}, 300,300,400));
+
+        // // Strat Loin Bleue OG
+        // delay(4000);
+        // robot->addTarget(new BezierTarget(robot, 300, 400, 300,{1000, 600, 45},1000)); 
+        // robot->addTarget(new BezierTarget(robot, 300, 400, 300, {2000, 300, -55},1000));
+
+        // //Superstar Bleue 4
+        // robot->addTarget(new PositionTarget(robot, {560,0}, 100,300,400));
+        // robot->addTarget(new PositionTarget(robot, {1200,0}, 100,300,400)); 
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1220,315})); // Pour s'assurer qu'il fasse le tour dans le bon sens
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1200,315}));
+        // robot->addTarget(new PositionTarget(robot, {1200,315}, 300,300,400));
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1800,315}));
+
+        ////////////////////
+
+        //////////////////// NOTES
+        // Plus d'angle pour la courbe longue
+
+
     }
     #ifdef GOUPILLE_ENABLED
     if (stratChoice == 1){
     #else
     if (digitalRead(boutonB) == LOW){ //&& digitalRead(goupille) == HIGH){
     #endif
-        Serial.println("Bouton B pressé");
+        //Serial.println("Bouton B pressé");
         delay(4000);
-        robot->addTarget(new BezierTarget(robot, 300, 400, 300,{700, -300, 45}, 100)); // Strat Milieu Jaune // Test V1 PAMI: parfait
-        robot->addTarget(new BezierTarget(robot, 300, 400, 300, {1400, -200, 45},100));
-        // robot->addTarget(new PositionTarget(robot, {2000,0}, 300,400,300)); // Strat Superstar Jaune de merde: Ne jamais utiliser!!!!
-        // robot->addTarget(new PositionTarget(robot, {1200,-300}, 300,400,300));
+
+        // //Superstar Bleue OG
+        // robot->addTarget(new PositionTarget(robot, {560,0}, 100,300,400));
+        // robot->addTarget(new PositionTarget(robot, {1200,0}, 100,300,400)); 
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1220,315})); // Pour s'assurer qu'il fasse le tour dans le bon sens
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1200,315}));
+        // robot->addTarget(new PositionTarget(robot, {1200,315}, 300,300,400));
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1800,315}));
+
+        // Strat Loin Bleue OG
+        #if PAMI == 1
+            robot->addTarget(new BezierTarget(robot, 300, 400, 300,{1000, 300, 45},1000)); 
+            robot->addTarget(new BezierTarget(robot, 300, 400, 300, {2000, 100, -55},1000));
+        #endif
+        // // Strat Milieu Bleue OG
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1500,400}));
+        // robot->addTarget(new PositionTarget(robot, {1500,400}, 300,300,400));
+
+        // // Strat Proche Bleue OG
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1000,300}));
+        // robot->addTarget(new PositionTarget(robot, {1000,300}, 300,300,400));
+
+        //////////////////////////////
+
+        // //Superstar Bleue 2 (Tout comme OG)
+        // robot->addTarget(new PositionTarget(robot, {560,0}, 100,300,400));
+        // robot->addTarget(new PositionTarget(robot, {1200,0}, 100,300,400)); 
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1220,315})); // Pour s'assurer qu'il fasse le tour dans le bon sens
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1200,315}));
+        // robot->addTarget(new PositionTarget(robot, {1200,315}, 300,300,400));
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1800,315}));
+
+        // // Strat Loin Bleue 2
+        // robot->addTarget(new BezierTarget(robot, 300, 400, 300,{750, 400, 55},1000)); 
+        // robot->addTarget(new BezierTarget(robot, 300, 400, 300, {2000, 200, -35},1000));
+
+        // Strat Milieu Bleue 2
+        #if PAMI == 2
+            delay(2000);
+            robot->addTarget(new RotateTowardPositionTarget(robot, {1500,400}));
+            robot->addTarget(new PositionTarget(robot, {1500,400}, 300,300,400));
+        #endif
+        // // Strat Proche Bleue 2
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1000,300}));
+        // robot->addTarget(new PositionTarget(robot, {1000,300}, 300,300,400));
+
+        ////////////////////////////
+
+        // //Superstar Bleue 4 (Mieux ici de pas prendre la strat de Laurent a priori)
+        #if PAMI == 4
+            #if SUPERSTARALT == 1
+            robot->addTarget(new PositionTarget(robot, {560,0}, 100,300,400));
+            robot->addTarget(new PositionTarget(robot, {1200,0}, 100,300,400)); 
+            robot->addTarget(new RotateTowardPositionTarget(robot, {1220,300})); // Pour s'assurer qu'il fasse le tour dans le bon sens
+            robot->addTarget(new RotateTowardPositionTarget(robot, {1200,300}));
+            robot->addTarget(new PositionTarget(robot, {1200,300}, 300,300,400));
+            robot->addTarget(new RotateTowardPositionTarget(robot, {1800,300}));
+            #endif
+            #if SUPERSTARALT == 2
+            // robot->addTarget(new PositionTarget(robot, {500,0}, 100,300,400));
+            robot->addTarget(new PositionTarget(robot, {1200,0}, 300,300,400)); 
+            robot->addTarget(new RotateTowardPositionTarget(robot, {1220,250})); // Pour s'assurer qu'il fasse le tour dans le bon sens
+            robot->addTarget(new RotateTowardPositionTarget(robot, {1200,250}));
+            robot->addTarget(new PositionTarget(robot, {1200,250}, 300,300,400));
+            robot->addTarget(new RotateTowardPositionTarget(robot, {1800,250}));
+            #endif
+        #endif
+        // // Strat Loin Bleue 4
+        // robot->addTarget(new BezierTarget(robot, 300, 400, 300,{1000, 400, 45},1000)); 
+        // robot->addTarget(new BezierTarget(robot, 300, 400, 300, {2000, 100, -55},1000));
+
+        // // Strat Milieu Bleue 4
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1500,400}));
+        // robot->addTarget(new PositionTarget(robot, {1500,400}, 300,300,400));
+
+        // // Strat Proche Bleue 4
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1000,400}));
+        // robot->addTarget(new PositionTarget(robot, {1000,400}, 300,300,400));
+
+        ////////////////////////////
+
+        // //Superstar Bleue 3
+        // robot->addTarget(new PositionTarget(robot, {560,0}, 100,300,400));
+        // robot->addTarget(new PositionTarget(robot, {1200,0}, 100,300,400)); 
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1220,315})); // Pour s'assurer qu'il fasse le tour dans le bon sens
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1200,315}));
+        // robot->addTarget(new PositionTarget(robot, {1200,315}, 300,300,400));
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1800,315}));
+
+        // // Strat Loin Bleue 3
+        // robot->addTarget(new BezierTarget(robot, 300, 400, 300,{750, 400, 55},1000)); 
+        // robot->addTarget(new BezierTarget(robot, 300, 400, 300, {2000, 200, -35},1000));
+
+        // // Strat Milieu Bleue 3
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1500,400}));
+        // robot->addTarget(new PositionTarget(robot, {1500,400}, 300,300,400));
+
+        // // Strat Proche Bleue 3
+        #if PAMI==3
+            delay(4000);
+            robot->addTarget(new RotateTowardPositionTarget(robot, {1000,400}));
+            robot->addTarget(new PositionTarget(robot, {1000,400}, 300,300,400));
+        #endif
+        /////////////////////////////
+
+        // //Superstar Bleue Urgence
+        // robot->addTarget(new PositionTarget(robot, {560,0}, 100,300,400));
+        // robot->addTarget(new PositionTarget(robot, {1200,0}, 100,300,400)); 
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1220,315})); // Pour s'assurer qu'il fasse le tour dans le bon sens
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1200,315}));
+        // robot->addTarget(new PositionTarget(robot, {1200,315}, 300,300,400));
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1800,315}));
+
+        // // Strat Loin Bleue Urgence
+        // robot->addTarget(new BezierTarget(robot, 300, 400, 300,{1000, 400, 45},1000)); 
+        // robot->addTarget(new BezierTarget(robot, 300, 400, 300, {2000, 100, -55},1000));
+
+        // // Strat Milieu Bleue Urgence
+        // delay(2000);
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1500,400}));
+        // robot->addTarget(new PositionTarget(robot, {1500,400}, 300,300,400));
+
+        // // Strat Proche Bleue Urgence
+        // robot->addTarget(new RotateTowardPositionTarget(robot, {1000,400}));
+        // robot->addTarget(new PositionTarget(robot, {1000,400}, 300,300,400));
     }
-    // if (digitalRead(boutonC)== LOW && digitalRead(goupille) == HIGH){
-    //     Serial.println("Bouton C presse");
-    //     delay(4000);
-    //     robot->addTarget(new BezierTarget(robot, 300, 400, 300,{1000, -170, -45}, 1000));// Strat Proche Jaune
-    // }
+
     #ifdef GOUPILLE_ENABLED
     if (stratChoice == 2){
     #else
     if (digitalRead(boutonC) == LOW){ //&& digitalRead(goupille) == HIGH){
     #endif
-        Serial.println("Bouton C presse");
-        delay(4000);
-        robot->addTarget(new BezierTarget(robot, 300, 400, 300,{1200, 10, 0}, 100)); // Strat Superstar Jaune
-        robot->addTarget(new BezierTarget(robot, 300, 400, 300,{1200, -375, 0}, 100));
-    }
-    //robot->addTarget(new BuzzerTarget(robot)); // simulation de l'actionneur a retirer quand l'actionneur arrive //Faire la fete (oui ca reste pour si la tache a ete faite correctement) ////////////////////////// Voir si l'actionneur se met en route seulement a la fin du match sinon il faudra preciser de ne pas actionner tant que le match n'est pas fini mais je pense qu'on est bon si on met que dans le loop() comme dans l'etat actuel
-    
-    
-    //robot->addTarget(new PositionTarget(robot, {1200,0}, 300,400,300)); // Strat Superstar Jaune de merde: Ne jamais utiliser!!!!
-    //robot->addTarget(new PositionTarget(robot, {1200,-300}, 300,400,300));
+        // // Serial.println("Bouton C presse");
+        // delay(85000);
 
-    // robot->addTarget(new RotateTowardPositionTarget(robot, {0,1000}));
-    // robot->addTarget(new PositionTarget(robot, {0,1000}, 300,400,300));
-    // robot->addTarget(new RotateTowardPositionTarget(robot, {0,0}));
-    // robot->addTarget(new PositionTarget(robot, {0,0}, 300, 400, 300));
+        
+    }
+
+    //robot->addTarget(new BuzzerTarget(robot)); // simulation de l'actionneur a retirer quand l'actionneur arrive //Faire la fete (oui ca reste pour si la tache a ete faite correctement) ////////////////////////// Voir si l'actionneur se met en route seulement a la fin du match sinon il faudra preciser de ne pas actionner tant que le match n'est pas fini mais je pense qu'on est bon si on met que dans le loop() comme dans l'etat actuel
+
+    // Superstar  calibration // Inutile!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // delay(5000);
+    // robot->addTarget(new PositionTarget(robot, {1200,0}, 300,400,300)); 
+    // robot->addTarget(new RotateTowardPositionTarget(robot, {1200,300}));
+    // robot->addTarget(new PositionTarget(robot, {1200,50}, 300,400,300));
+    // poscal = true;
+    // if(poscal==true){
+    //     robot->resetTarget();
+    //     robot->addTarget(new PositionTarget(robot, {1200,-300}, 300,400,300));
+    // }
+
+
+    startMeasurement();
+
+
 
     previous_micros = micros();
 
     //robot->addTarget(new AngleTarget(robot, 360));
     //robot->addTarget(new AngleTarget(robot, -170));
     //robot->addTarget(new RotateTowardPositionTarget(robot, pos));
+    
 }
 
-uint8_t current_count = 1;
+unsigned long current_count = 1;
 
 void loop() {
     while(micros() - previous_micros < 5000); // Pour eviter que le code tourne tout le temps (pour la memoire)
@@ -238,15 +564,15 @@ void loop() {
         left_motor->setPWM(0);
         right_motor->setPWM(0);
         Serial.println("Sorry for Party Rockin!");
-        //while(true);
         while(true){
             // Met à jour la largeur d'impulsion en fonction d'une valeur quelconque
-            int angle = analogRead(A0) / 5.7;  // Exemple : Lire un potentiomètre sur A0
+            int angle = 180;//analogRead(A0) / 5.7;  // Exemple : Lire un potentiomètre sur A0
             pulseWidth = map(angle, 0, 180, 500, 2500);  
 
             // Gestion non bloquante du signal PWM
             static bool pulseState = false;
             unsigned long currentMicros = micros();
+
 
             if (!pulseState && (currentMicros - previousMicros >= 20000)) {
                 // Début d'un nouveau cycle de 20ms (50Hz)
@@ -262,35 +588,75 @@ void loop() {
             }
         };
     }
+
     previous_micros = micros();
     delayMicroseconds(5000);
 
     //Lecture distance et Obstacle
-    if(current_count%16 == 0){ // 15 a la base mais 16 fait gagner 0.2% de memoire 
+    if(current_count == 13){ // 13 et 16 tourne et s'arrete mais restart merde; // 16
+        current_count = 0;
         int distance = readDistance();
         if (distance >= 0) {
             Serial.print("Distance: ");
             Serial.print(distance);
             Serial.println(" cm");
-            // if(distance <= distlim1 && distance > distlim2){ // Obstacle
-            //     left_motor->setPWM(30);
-            //     right_motor->setPWM(30);
-            // }
             if(distance <= distlim1){
+                
                 Obstacle = true;
                 robot->setRampSpeed(0);
                 robot->setRampSpeedAngle(0);
                 left_motor->setPWM(0);
-                right_motor->setPWM(0); 
+                right_motor->setPWM(0);
+
+                /////// Nouveau pour l'évitement : Pas en Belgique /////////////////
+                //Current position
+                Position currentPos = robot->getPosition();
+                float angle = currentPos.getAngle();
+                
+                robot->clearTargets();
+
+              //////////////////// Idée 1 /////////////////////////
+
+                if(Vu){
+                    distlim1 = 0;
+        
+                    // Rotation de 90 deg
+                    float newAngle = angle - 90;
+                    // if (newAngle < -180) newAngle += 360;
+                    robot->addTarget(new AngleTarget(robot, newAngle));
+                    Serial.println("Rotation");
+                    distlim1 = 20;
+                    // Avancer (contourner)
+                    float dx_forward = 150 * cos(newAngle * M_PI / 180.0);
+                    float dy_forward = 150 * sin(newAngle * M_PI / 180.0);
+                    Position aroundPos = {currentPos.getX() + dx_forward, currentPos.getY() + dy_forward};
+                    robot->addTarget(new PositionTarget(robot, aroundPos, 300, 300, 300));
+                    Serial.println("Avancer");
+        
+                    // Revenir à l'angle original
+                    robot->addTarget(new AngleTarget(robot, angle));
+                    Serial.println("Revenir à l'angle de base");
+
+                    Vu = false;
+                    Serial.println("Vu false");
+                    
+                    // Resume trajectory — just reset target queue afterwards if needed
+                }
+                
             }
             else{ 
                 if(Obstacle){
-                    robot->resetTarget();   
+                    Serial.println("Reset ramp");
+                    robot->setRampSpeed(0);
+                    robot->setRampSpeedAngle(0);
+                    robot->resetTarget();
+                    robot->addTarget(new PositionTarget(robot, {1500,400}, 300,300,400));
                 }
                 Obstacle = false;
+                
             }
         } else {
-            Serial.println("Error reading distance");
+            // Serial.println("Error reading distance");
         }
         delayMicroseconds(100); 
         startMeasurement();
@@ -301,7 +667,7 @@ void loop() {
     robot->control();
 
     #ifdef DEBUG_TXT
-    //Serial.println(*robot);
+    // Serial.println(*robot);
     #endif
     if (Obstacle){
         left_motor ->setPWM(0);
@@ -309,15 +675,4 @@ void loop() {
     }
 
     //Serial.println(freeMemory());
-    }
-
-
-// Ne pas oublier le dipswitch
-
-// Ne pas oublier de modifier les PINS
-
-// Verifier si on part bien d'une position definie sur le repere ou si il croit tjrs qu'on le pose en 0,0,0: Il croit qu'on est tjrs en 0,0,0. donc attention
-// Ne pas oublier que les PAMI ne sont pas toujours placés au meme endroit! Note: plus on est loin du bord, plus on va loin 
-// Dans le cas ou il pense qu'il est en 0,0,0 Il faut: faire attention a l'ordre des PAMI et au case choisi! ET/OU definir une position de depart pour chaque strat (mais la encore il faut faire attention au positionnement)
-// Mot d'ordre: Attention aux positionnements des PAMI et du case choisi : Numéroter les PAMIs (ecrire dessus la position qu'il doit avoir plutot que de juste numeroter)
-// Normalement, chaque PAMI a sa propre calibration (son propre PID) (de nouveau, bien numeroter)
+}

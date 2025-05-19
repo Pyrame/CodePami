@@ -1,7 +1,3 @@
-//
-// Created by fogoz on 13/12/2024.
-//
-
 #ifndef CODEPAMI_CURVE_H
 #define CODEPAMI_CURVE_H
 #include "Position.h"

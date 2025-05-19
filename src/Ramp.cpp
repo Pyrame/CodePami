@@ -1,7 +1,3 @@
-//
-// Created by fogoz on 07/12/2024.
-//
-
 #include "Ramp.h"
 
 #define SIGN(x) (x > 0 ? 1 : -1)
@@ -29,7 +25,7 @@ Ramp::Ramp(PRECISION_DATA_TYPE acc, PRECISION_DATA_TYPE max_speed, PRECISION_DAT
         this->acc_time = -this->sign_corrected.initial_speed/acc + sqrt((acc + dec) * (2*acc*dec* abs(distance) + acc * pow(end_speed, 2) + dec * pow(initial_speed, 2)))/(acc * (acc+dec));
         this->dec_time = (acc * this->acc_time + this->sign_corrected.initial_speed - this->sign_corrected.end_speed)/dec;
         this->ste_time = 0;
-        this->ste_speed = initial_speed + acc*this->acc_time;
+        this->ste_speed = sqrt((2*acc * abs(distance) * dec + acc * pow(this->sign_corrected.end_speed, 2) + dec * pow(this->sign_corrected.initial_speed, 2))/(acc+dec));
     }
     this->sign_corrected.acc_distance = this->sign_corrected.initial_speed * abs(this->acc_time) + SIGN(this->acc_time) * acc * pow(this->acc_time, 2)/2.0f;
     this->sign_corrected.dec_distance = ste_speed * abs(this->dec_time) - SIGN(this->dec_time) * dec * pow(this->dec_time, 2)/2.0;

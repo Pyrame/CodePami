@@ -1,7 +1,3 @@
-//
-// Created by fogoz on 13/12/2024.
-//
-
 #ifndef CODEPAMI_ROTATETOWARDPOSITIONTARGET_H
 #define CODEPAMI_ROTATETOWARDPOSITIONTARGET_H
 #include "Target.h"

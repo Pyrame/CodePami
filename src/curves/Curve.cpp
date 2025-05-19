@@ -1,7 +1,3 @@
-//
-// Created by fogoz on 13/12/2024.
-//
-
 #include "curves/Curve.h"
 #include "Integrator.h"
 
@@ -32,6 +28,7 @@ PRECISION_DATA_TYPE Curve::findNearest(Position pos, PRECISION_DATA_TYPE hmax) c
         PRECISION_DATA_TYPE c_dist = (getPosition(data_type) - pos).getDistance();
         if(c_dist < dist){
             index = data_type;
+            dist = c_dist;
         }
     }
     return index;

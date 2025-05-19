@@ -1,7 +1,3 @@
-//
-// Created by fogoz on 13/12/2024.
-//
-
 #include "Matrix22.h"
 
 Matrix22::Matrix22(PRECISION_DATA_TYPE a11, PRECISION_DATA_TYPE a12, PRECISION_DATA_TYPE a21, PRECISION_DATA_TYPE a22) {
