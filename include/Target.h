@@ -28,6 +28,7 @@ public:
 
     virtual void on_done() = 0;
 
+    virtual Target* clone() const = 0;
     virtual ~Target() = default;
 
 };

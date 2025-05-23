@@ -28,6 +28,8 @@ class Robot : public Printable{
     Motor* right_motor = nullptr;
     uint16_t target_count = 0;
     Target** targets = nullptr;
+    uint8_t** variable_ptr;
+    uint8_t* value;
     uint16_t max_targets = 10;
     uint16_t target_index = 0;
     PRECISION_DATA_TYPE total_distance;
@@ -43,6 +45,8 @@ class Robot : public Printable{
     PRECISION_DATA_TYPE ramp_speed_angle = 0.0f;
 
     friend Target;
+    private:
+    Target** remembered_target = nullptr;
 
     public:
     Robot(Motor* left_motor, Motor* right_motor, PRECISION_DATA_TYPE pulse_per_mm, PRECISION_DATA_TYPE track_mm, PRECISION_DATA_TYPE corr_right_wheel, PRECISION_DATA_TYPE x=0.0f, PRECISION_DATA_TYPE y=0.0f, PRECISION_DATA_TYPE a=0.0f);
@@ -50,6 +54,10 @@ class Robot : public Printable{
     ~Robot();
     
     void clearTargets();
+
+    void rememberTarget();
+
+    Target* getRememberedTarget() const;
 
     void computePosition(int16_t delta_left_tick, int16_t delta_right_tick);
 
@@ -64,6 +72,8 @@ class Robot : public Printable{
     void computeTarget();
 
     bool addTarget(Target* target);
+
+    bool addTarget(Target* target, uint8_t* variable_to_change, uint8_t value);
 
     void resetTarget();
 

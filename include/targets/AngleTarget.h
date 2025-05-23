@@ -23,6 +23,10 @@ public:
     void on_done() override;
 
     void reinitRamp() override;
+    
+    Target* clone() const override {
+        return new AngleTarget(*this);
+    }
 
     bool optimized;
 };

@@ -22,6 +22,10 @@ public:
 
     void reinitRamp() override;
 
+    Target* clone() const override {
+        return new PositionTarget(*this);
+    }
+
     ~PositionTarget() override;
 
     void on_done() override;

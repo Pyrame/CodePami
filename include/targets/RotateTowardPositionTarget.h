@@ -23,6 +23,10 @@ public:
 
     void reinitRamp() override;
 
+    Target* clone() const override {
+        return new RotateTowardPositionTarget(*this);
+    }
+
     ~RotateTowardPositionTarget() override;
 };
 

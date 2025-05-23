@@ -6,6 +6,8 @@ Robot::Robot(Motor *left_motor, Motor *right_motor, PRECISION_DATA_TYPE pulse_pe
     this->left_motor = left_motor;
     this->right_motor = right_motor;
     this->targets = static_cast<Target **>(malloc(sizeof(Target *) * this->max_targets));
+    this->variable_ptr = static_cast<uint8_t**>(malloc(sizeof(uint8_t*) * (this->max_targets +2)));
+    this->value = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * (this->max_targets +2)));
 }
 
 void Robot::computePosition(int16_t delta_left_tick, int16_t delta_right_tick) {
@@ -97,6 +99,10 @@ void Robot:: computeTarget() {
     if(this->target_count <= this->target_index)
         return;
     Target* target = this->targets[this->target_index];
+    uint8_t* pointer = this->variable_ptr[this->target_index];
+    if(pointer != nullptr){
+        *pointer = value[this->target_index];
+    }
     target->call_init();
     target->process();
     if(target->is_done()){
@@ -108,14 +114,27 @@ void Robot:: computeTarget() {
 bool Robot::addTarget(Target *target) {
     if(this->target_count >= this->max_targets){
         auto** pTarget = static_cast<Target **>(realloc(this->targets, sizeof(Target *) * (this->max_targets + 2)));
-        if(pTarget == nullptr){
+        auto** pVariablePtr = static_cast<uint8_t**>(realloc(this->variable_ptr, sizeof(uint8_t*) * (this->max_targets +2)));
+        auto* pVariable = static_cast<uint8_t*>(realloc(this->value, sizeof(uint8_t) * (this->max_targets +2)));
+        if(pTarget == nullptr || pVariablePtr == nullptr){
             return false;
         }
+        this->variable_ptr = pVariablePtr;
         this->targets = pTarget;
+        this->value = pVariable;
         this->max_targets+=2;
     }
+    this->variable_ptr[this->target_count] = nullptr;
     this->targets[this->target_count] = target;
     this->target_count++;
+    return true;
+}
+
+bool Robot::addTarget(Target* target, uint8_t* variable_to_change, uint8_t value){
+    if(!addTarget(target))
+        return false;
+    this->variable_ptr[this->target_count-1] = variable_to_change;
+    this->value[this->target_count-1] = value;
     return true;
 }
 
@@ -258,5 +277,30 @@ void Robot::clearTargets() {
     target_count = 0;
     target_index = 0;
     max_targets = 10;
+
+
     targets = static_cast<Target **>(malloc(sizeof(Target *) * max_targets));
+    variable_ptr = static_cast<uint8_t**>(malloc(sizeof(uint8_t*) * (this->max_targets +2)));
+    value = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * (this->max_targets +2)));
+}
+
+void Robot::rememberTarget() {
+    if (this->target_count <= this->target_index)
+        return;
+
+    // Libère l'ancienne target si elle existe
+    if (remembered_target != nullptr) {
+        delete remembered_target[0];
+        free(remembered_target);
+    }
+
+    // Alloue de la mémoire pour un seul pointeur de Target
+    remembered_target = static_cast<Target**>(malloc(sizeof(Target*)));
+
+    // Copie de l'objet Target courant
+    remembered_target[0] = this->targets[this->target_index]->clone();
+}
+
+Target* Robot::getRememberedTarget() const {
+    return remembered_target != nullptr ? remembered_target[0] : nullptr;
 }
