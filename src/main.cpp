@@ -375,11 +375,9 @@ void loop() {
                 if(Vu){
                     distlim1 = 0;
         
-                    // Rotation de 90 deg
-                    float preAngle = angle - 45;
-                    float newAngle = preAngle - 45;
+                    // Rotation de 70 deg
+                    float newAngle = angle - 70; // Pas besoin d'aller jusque 90 (qui est imprevisible niveau sens), 70 suffit
                     // if (newAngle < -180) newAngle += 360;
-                    robot->addTarget(new AngleTarget(robot, preAngle)); // Pour s'assurer qu'il tourne dans un sens précis
                     robot->addTarget(new AngleTarget(robot, newAngle));
                     Serial.println("Rotation");
                     // Avancer (contourner)
@@ -390,7 +388,6 @@ void loop() {
                     Serial.println("Avancer");
         
                     // Revenir à l'angle original
-                    robot->addTarget(new AngleTarget(robot, preAngle)); // Pour s'assurer qu'il tourne dans un sens précis
                     robot->addTarget(new AngleTarget(robot, angle));
                     Serial.println("Revenir à l'angle de base");
 
