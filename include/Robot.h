@@ -31,7 +31,7 @@ class Robot : public Printable{
     uint8_t** variable_ptr;
     uint8_t* value;
     uint16_t max_targets = 10;
-    uint16_t target_index = 0;
+    //uint16_t target_index = 0;
     PRECISION_DATA_TYPE total_distance;
     PRECISION_DATA_TYPE target_distance;
     PRECISION_DATA_TYPE total_angle;
@@ -46,7 +46,7 @@ class Robot : public Printable{
 
     friend Target;
     private:
-    Target** remembered_target = nullptr;
+    Target* remembered_target = nullptr;
 
     public:
     Robot(Motor* left_motor, Motor* right_motor, PRECISION_DATA_TYPE pulse_per_mm, PRECISION_DATA_TYPE track_mm, PRECISION_DATA_TYPE corr_right_wheel, PRECISION_DATA_TYPE x=0.0f, PRECISION_DATA_TYPE y=0.0f, PRECISION_DATA_TYPE a=0.0f);
@@ -74,6 +74,12 @@ class Robot : public Printable{
     bool addTarget(Target* target);
 
     bool addTarget(Target* target, uint8_t* variable_to_change, uint8_t value);
+
+    bool injectTarget(Target* target);
+
+    bool injectTarget(Target* target, uint8_t* variable_to_change, uint8_t value);
+
+    void injectRotateToward();
 
     void resetTarget();
 
@@ -118,5 +124,6 @@ class Robot : public Printable{
     void stop();
 
     void resetcontrol();
+    uint16_t getTargetCount();
 };
 #endif

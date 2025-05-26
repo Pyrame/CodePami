@@ -25,7 +25,7 @@ public:
     void reinitRamp() override;
     
     Target* clone() const override {
-        return new AngleTarget(*this);
+        return new AngleTarget(robot, target, acc, dec, max_speed, optimized);
     }
 
     bool optimized;

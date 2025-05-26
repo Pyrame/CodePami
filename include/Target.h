@@ -18,6 +18,10 @@ public:
             is_init = true;
         }
     }
+
+    void clearInit(){
+        is_init = false;
+    }
     
     virtual void reinitRamp(){
         
@@ -25,6 +29,10 @@ public:
 
     virtual bool is_done() = 0;
     virtual void process() = 0;
+
+    virtual Target* generateRotateToward(){
+        return nullptr;
+    }
 
     virtual void on_done() = 0;
 

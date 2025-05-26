@@ -7,6 +7,12 @@ BezierTarget::BezierTarget(Robot *robot, PRECISION_DATA_TYPE acc, PRECISION_DATA
 }
 
 void BezierTarget::init(){
+    if(distanceRamp != nullptr){
+        delete distanceRamp;
+    }
+    if(this->curve != nullptr){
+        delete this->curve;
+    }
 #ifdef DEBUG_TXT
     Serial.print("Init target toward : ");
     Serial.println(end_pos);

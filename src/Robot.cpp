@@ -45,7 +45,7 @@ void Robot::control() {
         PRECISION_DATA_TYPE distance_term = mult*((done_distance && abs(target_distance - total_distance) < 5) ? 0 : pid_distance->evaluate(target_distance - total_distance));
         //Serial.println(distance_term);
         PRECISION_DATA_TYPE angle_term = done_angle ? 0 : (mult!=1 ?pid_angle->evaluate(correctAngle(target_angle - total_angle-180)) :pid_angle->evaluate(correctAngle(target_angle - total_angle)));
-        Serial.println(correctAngle(target_angle - total_angle));
+        //Serial.println(correctAngle(target_angle - total_angle));
         int16_t left_wheel = constrain(constrain(distance_term, -200, 200) - constrain(angle_term, -200, 200), -255, 255);
         int16_t right_wheel = constrain(constrain(distance_term, -200, 200) + constrain(angle_term, -200, 200), -255, 255);
         this->right_motor->setPWM(right_wheel);
@@ -96,18 +96,24 @@ size_t Robot::printTo(Print &p) const {
 }
 
 void Robot:: computeTarget() {
-    if(this->target_count <= this->target_index)
+    if(this->target_count == 0)
         return;
-    Target* target = this->targets[this->target_index];
-    uint8_t* pointer = this->variable_ptr[this->target_index];
+    Target* target = this->targets[0];
+    uint8_t* pointer = this->variable_ptr[0];
     if(pointer != nullptr){
-        *pointer = value[this->target_index];
+        *pointer = value[0];
     }
     target->call_init();
     target->process();
     if(target->is_done()){
         target->on_done();
-        this->target_index++;
+        delete this->targets[0];
+        for(int i = 1; i < this->target_count; i++){
+            this->targets[i-1] = targets[i];
+            this->variable_ptr[i-1] = this->variable_ptr[i];
+            this->value[i-1] = this->value[i];
+        }
+        this->target_count--;
     }
 }
 
@@ -135,6 +141,41 @@ bool Robot::addTarget(Target* target, uint8_t* variable_to_change, uint8_t value
         return false;
     this->variable_ptr[this->target_count-1] = variable_to_change;
     this->value[this->target_count-1] = value;
+    return true;
+}
+
+bool Robot::injectTarget(Target* target){
+    if(this->target_count >= this->max_targets){
+        auto** pTarget = static_cast<Target **>(realloc(this->targets, sizeof(Target *) * (this->max_targets + 2)));
+        auto** pVariablePtr = static_cast<uint8_t**>(realloc(this->variable_ptr, sizeof(uint8_t*) * (this->max_targets +2)));
+        auto* pVariable = static_cast<uint8_t*>(realloc(this->value, sizeof(uint8_t) * (this->max_targets +2)));
+        if(pTarget == nullptr || pVariablePtr == nullptr){
+            return false;
+        }
+        this->variable_ptr = pVariablePtr;
+        this->targets = pTarget;
+        this->value = pVariable;
+        this->max_targets+=2;
+    }
+    for(int i = target_count-1; i >= 0; i--){
+        this->targets[i+1] = this->targets[i];
+        this->targets[i]->clearInit();
+        this->variable_ptr[i+1] = this->variable_ptr[i];
+        this->value[i+1] = this->value[i];
+    }
+    target_count++;
+    this->targets[0] = target;
+    this->variable_ptr[0] = nullptr;
+    return true;
+}
+
+bool Robot::injectTarget(Target *target, uint8_t *variable_to_change, uint8_t value)
+{
+    if(!injectTarget(target)){
+        return false;
+    }
+    this->variable_ptr[0] = variable_to_change;
+    this->value[0] = value;
     return true;
 }
 
@@ -175,14 +216,26 @@ PRECISION_DATA_TYPE Robot::getRampSpeed() const {
 }
 
 void Robot::resetTarget(){
-    if(this->target_count <= this->target_index)
+    if(this->target_count <= 0)
         return;
-    Target* target = this->targets[this->target_index];
+    Target* target = this->targets[0];
     setTargetDistance(getTotalDistance());
     setTargetAngle(getTotalAngle());
-    target->reinitRamp();
+    //target->reinitRamp();
+    target->clearInit();
     pid_angle->resetTerms();
     pid_distance->resetTerms();
+}
+
+void Robot::injectRotateToward()
+{
+    if(target_count == 0){
+        return;
+    }
+    Target* target = targets[0]->generateRotateToward();
+    if(target != nullptr){
+        injectTarget(target);
+    }
 }
 
 void Robot::setRampSpeed(PRECISION_DATA_TYPE rampSpeed) {
@@ -268,6 +321,10 @@ void Robot::resetcontrol(){
     }
 }
 
+uint16_t Robot::getTargetCount()
+{
+    return target_count;
+}
 
 void Robot::clearTargets() {
     for(uint16_t i = 0; i < target_count; i++)
@@ -275,7 +332,6 @@ void Robot::clearTargets() {
     free(targets);
 
     target_count = 0;
-    target_index = 0;
     max_targets = 10;
 
 
@@ -285,22 +341,18 @@ void Robot::clearTargets() {
 }
 
 void Robot::rememberTarget() {
-    if (this->target_count <= this->target_index)
+    if (this->target_count <= 0)
         return;
 
     // Libère l'ancienne target si elle existe
     if (remembered_target != nullptr) {
-        delete remembered_target[0];
-        free(remembered_target);
+        delete remembered_target;
     }
 
-    // Alloue de la mémoire pour un seul pointeur de Target
-    remembered_target = static_cast<Target**>(malloc(sizeof(Target*)));
-
     // Copie de l'objet Target courant
-    remembered_target[0] = this->targets[this->target_index]->clone();
+    remembered_target = this->targets[0]->clone();
 }
 
 Target* Robot::getRememberedTarget() const {
-    return remembered_target != nullptr ? remembered_target[0] : nullptr;
+    return remembered_target;
 }

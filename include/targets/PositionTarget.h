@@ -23,8 +23,10 @@ public:
     void reinitRamp() override;
 
     Target* clone() const override {
-        return new PositionTarget(*this);
+        return new PositionTarget(robot, pos, acc, dec, max_speed, end_speed);
     }
+
+    Target* generateRotateToward() override;
 
     ~PositionTarget() override;
 

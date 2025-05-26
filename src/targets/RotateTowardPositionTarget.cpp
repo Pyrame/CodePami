@@ -3,6 +3,9 @@
 
 
 void RotateTowardPositionTarget::init() {
+    if(ramp != nullptr){
+        delete ramp;
+    }
     target = (pos-robot->getPosition()).getVectorAngle();
 #ifdef DEBUG_TXT
     Serial.println(target- robot->getTargetAngle());

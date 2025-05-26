@@ -1,9 +1,13 @@
 #include "./targets/PositionTarget.h"
+#include "./targets/RotateTowardPositionTarget.h"
 #include "Robot.h"
 
 PositionTarget::PositionTarget(Robot *robot, const Position &pos, PRECISION_DATA_TYPE acc, PRECISION_DATA_TYPE dec, PRECISION_DATA_TYPE max_speed, PRECISION_DATA_TYPE end_speed) : Target(robot), pos(pos), max_speed(max_speed), acc(acc), dec(dec), end_speed(end_speed) {}
 
 void PositionTarget::init() {
+    if(ramp != nullptr){
+        delete ramp;
+    }
     ramp = new Ramp(acc, max_speed, dec, (pos-robot->getPosition()).getDistance(), robot->getRampSpeed(), end_speed);
     ramp->start(robot->getTotalDistance());
     robot->setDoneAngle(false);
@@ -34,6 +38,10 @@ void PositionTarget::process() {
 
 PositionTarget::~PositionTarget() {
     delete ramp;
+}
+
+Target* PositionTarget::generateRotateToward(){
+    return new RotateTowardPositionTarget(robot, pos);
 }
 
 void PositionTarget::on_done() {

@@ -14,6 +14,9 @@ void AngleTarget::process() {
 }
 
 void AngleTarget::init() {
+    if(ramp != nullptr){
+        delete ramp;
+    }
     if(!optimized){
         ramp = new Ramp(acc, max_speed, dec, target-robot->getPosition().getAngle());
     }else{

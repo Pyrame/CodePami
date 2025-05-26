@@ -55,7 +55,6 @@ const int boutonC = 17; //IO_2
 
 bool Obstacle = false;
 bool Vu = true;
-bool okremember = false;
 
 // bool poscal = false;
 
@@ -192,7 +191,7 @@ void setup() {
     if (digitalRead(boutonA) == LOW){ //&& digitalRead(goupille) == HIGH){
     #endif
         //Serial.println("Rien de pressé: Strat Jaune");
-        delay(85000); // Attente apres demarrage de match (normalement 85 sec)
+        delay(4000); // Attente apres demarrage de match (normalement 85 sec)
 
 
         // robot->addTarget(new PositionTarget(robot, {2000,0}, 300,400,300)); // Test PID
@@ -251,7 +250,7 @@ void setup() {
     if (digitalRead(boutonB) == LOW){ //&& digitalRead(goupille) == HIGH){
     #endif
         //Serial.println("Bouton B pressé: Strat Bleue");
-        delay(85000); // Attente apres demarrage de match (normalement 85 sec)
+        delay(4000); // Attente apres demarrage de match (normalement 85 sec)
 
         // Strat Loin Bleue 1
         #if PAMI == 1
@@ -355,6 +354,7 @@ void loop() {
             Serial.print("Distance: ");
             Serial.print(distance);
             Serial.println(" cm");
+            Serial.println(*robot);
             if(distance <= distlim1){
                 
                 Obstacle = true;
@@ -366,33 +366,34 @@ void loop() {
                 /////// Nouveau pour l'évitement : Pas en Belgique /////////////////
                 // Que programmé pour jaune pour le moment!!
                 
-                //Current position
-                Position currentPos = robot->getPosition();
-                float angle = currentPos.getAngle();
-                robot->rememberTarget(); // Retient la cible
-                robot->clearTargets(); // Attention: Efface les targets
 
-                if(Vu){
+                if(Vu && robot->getTargetCount() != 0){
+                    //Current position
+                    Position currentPos = robot->getPosition();
+                    float angle = currentPos.getAngle();
+                    //robot->rememberTarget(); // Retient la cible
+                    //robot->clearTargets(); // Attention: Efface les targets
                     distlim1 = 0;
-        
+                    robot->injectRotateToward();
+
                     // Rotation de 70 deg
                     float newAngle = angle - 70; // Pas besoin d'aller jusque 90 (qui est imprevisible niveau sens), 70 suffit
                     // if (newAngle < -180) newAngle += 360;
-                    robot->addTarget(new AngleTarget(robot, newAngle));
-                    Serial.println("Rotation");
-                    // Avancer (contourner)
                     float dx_forward = 150 * cos(newAngle * M_PI / 180.0);
                     float dy_forward = 150 * sin(newAngle * M_PI / 180.0);
                     Position aroundPos = {currentPos.getX() + dx_forward, currentPos.getY() + dy_forward};
-                    robot->addTarget(new PositionTarget(robot, aroundPos, 300, 300, 300), &distlim1, 20);
+                    robot->injectTarget(new PositionTarget(robot, aroundPos, 300, 300, 300), &distlim1, 20);
                     Serial.println("Avancer");
-        
+                    
+                    robot->injectTarget(new AngleTarget(robot, newAngle));
+                    Serial.println("Rotation");
+                    // Avancer (contourner)
+                    
                     // Revenir à l'angle original
-                    robot->addTarget(new AngleTarget(robot, angle));
+                    //robot->addTarget(new AngleTarget(robot, angle));
                     Serial.println("Revenir à l'angle de base");
-
+                    //robot->addTarget(robot->getRememberedTarget()->clone());
                     Vu = false;
-                    okremember = true;
                     Serial.println("Vu: Il ne fera plus d'évitement");
                     
                     
@@ -405,9 +406,6 @@ void loop() {
                     robot->setRampSpeed(0);
                     robot->setRampSpeedAngle(0);
                     robot->resetTarget();
-                    if(okremember){
-                        robot->getRememberedTarget();
-                    }
                     
                 }
                 Obstacle = false;
@@ -421,9 +419,10 @@ void loop() {
     }
     current_count++;
     robot->computePosition(Romi32U4Encoders::getCountsAndResetLeft(), Romi32U4Encoders::getCountsAndResetRight());
-    robot->computeTarget();
-    robot->control();
-
+    if(!Obstacle){
+        robot->computeTarget();
+        robot->control();
+    }
     #ifdef DEBUG_TXT
     // Serial.println(*robot);
     #endif
